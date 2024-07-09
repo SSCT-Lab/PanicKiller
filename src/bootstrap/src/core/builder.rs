@@ -768,6 +768,7 @@ impl<'a> Builder<'a> {
                 tool::CoverageDump,
                 tool::LlvmBitcodeLinker,
                 tool::RustcPerf,
+                tool::Panickiller,
             ),
             Kind::Clippy => describe!(
                 clippy::Std,
