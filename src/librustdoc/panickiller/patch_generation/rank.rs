@@ -13,7 +13,7 @@ impl PatchRanker {
     pub fn rank_patches(&mut self) -> PyResult<()> {
         Python::with_gil(|py| {
             let sys = PyModule::import(py, "sys")?;
-            let path = "/home/cardigan/rustc-graph/src/librustdoc/tooling/patch_generation";
+            let path = "/home/yunboni/PanicKiller/src/librustdoc/panickiller/patch_generation";
             sys.getattr("path")?.call_method1("append", (path,))?;
 
             let text_similarity = PyModule::import(py, "text_similarity")?;
