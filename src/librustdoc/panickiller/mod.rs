@@ -13,7 +13,7 @@ use rustc_middle::ty::TyCtxt;
 
 use crate::panickiller::fault_localization::graph::{DependencyGraph, GraphVisitor};
 use crate::panickiller::patch_generation::patch::Transform;
-use crate::panickiller::fault_localization::extract::extract_backtrace;
+// use crate::panickiller::fault_localization::extract::extract_backtrace;
 use crate::panickiller::patch_generation::rank::PatchRanker;
 use crate::panickiller::patch_validation::validation::Validator;
 
@@ -77,7 +77,8 @@ pub fn analyze_dependencies(tcx: TyCtxt<'_>) {
     println!("Fault localization begins.");
     // Extract backtrace
     writeln!(log_file, "Fault localization begins.").expect("Failed to write to log file");
-    let fault_locs = extract_backtrace(PathBuf::from("../src/backtrace"));
+    // let fault_locs = extract_backtrace(PathBuf::from("../src/backtrace"));
+    let fault_locs = utils::get_perfect_location();
     for fault_loc in fault_locs.clone() {
         writeln!(log_file, "{:?}", fault_loc).expect("Failed to write to log file");
     }

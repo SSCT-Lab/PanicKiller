@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use regex::Regex;
 use rustc_span::{FileName, FileNameDisplayPreference};
 use diesel::mysql::MysqlConnection;
-use super::database::model::{NewDependency, NewLocInfo,LocInfo,Dependency};
+// use super::database::model::{NewDependency, NewLocInfo,LocInfo,Dependency};
+use super::database::model::{NewDependency, NewLocInfo};
 use super::database::schema::loc_info::dsl::*;
 use super::database::schema::dependencies::dsl::*;
 use diesel::define_sql_function;
@@ -82,57 +83,57 @@ pub fn insert_dependency(dep_lhs_id: i32, dep_rhs_id: i32) {
 }
 
 
-pub fn select_loc_info(path: String, line: i32, _col: i32) -> Option<LocInfo> {
-    let conn = &mut get_connection();
+// pub fn select_loc_info(path: String, line: i32, _col: i32) -> Option<LocInfo> {
+//     let conn = &mut get_connection();
 
-    let results = loc_info.filter(file_path.eq(path))
-                        .filter(line_num.eq(line))
-                        .limit(1)
-                        .load::<LocInfo>(conn)
-                        .expect("Failed to load LocInfo");
+//     let results = loc_info.filter(file_path.eq(path))
+//                         .filter(line_num.eq(line))
+//                         .limit(1)
+//                         .load::<LocInfo>(conn)
+//                         .expect("Failed to load LocInfo");
     
-    let temp = match results.get(0) {
-        Some(temp) => temp,
-        None => return None,
-    };
+//     let temp = match results.get(0) {
+//         Some(temp) => temp,
+//         None => return None,
+//     };
 
-    Some(LocInfo {
-        id: temp.id,
-        ident: temp.ident.clone(),
-        line_num: temp.line_num,
-        col_num: temp.col_num,
-        file_path: temp.file_path.clone(),
-    })
-}
+//     Some(LocInfo {
+//         id: temp.id,
+//         ident: temp.ident.clone(),
+//         line_num: temp.line_num,
+//         col_num: temp.col_num,
+//         file_path: temp.file_path.clone(),
+//     })
+// }
 
-pub fn select_dep(loc: &LocInfo) -> Vec<Dependency> {
-    let conn = &mut get_connection();
-    let results = dependencies.filter(lhs_id.eq(loc.id))
-                        .load::<Dependency>(conn)
-                        .expect("Failed to load LocInfo");
-    results
-}
+// pub fn select_dep(loc: &LocInfo) -> Vec<Dependency> {
+//     let conn = &mut get_connection();
+//     let results = dependencies.filter(lhs_id.eq(loc.id))
+//                         .load::<Dependency>(conn)
+//                         .expect("Failed to load LocInfo");
+//     results
+// }
 
 
-pub fn select_loc_info_by_id(id_in: i32) -> LocInfo {
-    use super::database::schema::loc_info::dsl::*;
+// pub fn select_loc_info_by_id(id_in: i32) -> LocInfo {
+//     use super::database::schema::loc_info::dsl::*;
 
-    let conn = &mut get_connection();
+//     let conn = &mut get_connection();
 
-    let results = loc_info.filter(id.eq(id_in))
-                        .limit(1)
-                        .load::<LocInfo>(conn)
-                        .expect("Failed to load LocInfo");
-    let temp = results.get(0).unwrap();
+//     let results = loc_info.filter(id.eq(id_in))
+//                         .limit(1)
+//                         .load::<LocInfo>(conn)
+//                         .expect("Failed to load LocInfo");
+//     let temp = results.get(0).unwrap();
 
-    LocInfo {
-        id:temp.id,
-        ident:temp.ident.clone(),
-        line_num:temp.line_num,
-        col_num:temp.col_num,
-        file_path:temp.file_path.clone(),
-    }
-}
+//     LocInfo {
+//         id:temp.id,
+//         ident:temp.ident.clone(),
+//         line_num:temp.line_num,
+//         col_num:temp.col_num,
+//         file_path:temp.file_path.clone(),
+//     }
+// }
 
 pub fn extract_index_from_panic(panic_info: String) -> Option<i32> {
     let re = Regex::new(r"index(?: is)? (\d+)").unwrap();
@@ -150,38 +151,38 @@ pub fn extract_index_from_panic(panic_info: String) -> Option<i32> {
 
 // fix-baseline (perfect location)
 
-// use super::fault_localization::extract::FaultLoc;
+use super::fault_localization::extract::FaultLoc;
 
-// pub fn get_perfect_location() -> Vec<FaultLoc> {
-//     let pl_path = std::env::current_dir()
-//         .expect("Failed to get current directory")
-//         .parent()
-//         .expect("Failed to get parent directory")
-//         .join("src")
-//         .join("perfect_location.txt");
-//     let pl_content = std::fs::read_to_string(pl_path).expect("Failed to read perfect location file");
+pub fn get_perfect_location() -> Vec<FaultLoc> {
+    let pl_path = std::env::current_dir()
+        .expect("Failed to get current directory")
+        .parent()
+        .expect("Failed to get parent directory")
+        .join("src")
+        .join("perfect_location.txt");
+    let pl_content = std::fs::read_to_string(pl_path).expect("Failed to read perfect location file");
 
-//     let mut fault_locs: Vec<FaultLoc> = Vec::new();
+    let mut fault_locs: Vec<FaultLoc> = Vec::new();
 
-//     for line in pl_content.lines() {
-//         let parts: Vec<&str> = line.split(':').collect();
-//         let path = PathBuf::from(parts[0]);
-//         let line = parts[1].parse::<usize>().unwrap();
-//         let col = parts[2].parse::<usize>().unwrap();
+    for line in pl_content.lines() {
+        let parts: Vec<&str> = line.split(':').collect();
+        let path = PathBuf::from(parts[0]);
+        let line = parts[1].parse::<usize>().unwrap();
+        let col = parts[2].parse::<usize>().unwrap();
 
-//         fault_locs.push(FaultLoc {
-//             ident: "".to_string(),
-//             line_num: line,
-//             col_num: col,
-//             file_path: path,
-//             is_dep: false,
-//             depth: 1,
-//             score: 0.0,
-//         });
-//     }
+        fault_locs.push(FaultLoc {
+            ident: "".to_string(),
+            line_num: line,
+            col_num: col,
+            file_path: path,
+            is_dep: false,
+            depth: 1,
+            score: 0.0,
+        });
+    }
 
-//     fault_locs
-// }
+    fault_locs
+}
 
 // location-baseline1(panic)
 
