@@ -1,4 +1,6 @@
 #[derive(Debug, Clone)]
+#[allow(unused)]
+#[allow(dead_code)]
 pub enum PATTERN {
     McAdd(AddType),
     McChange(ChangeType),
@@ -13,6 +15,8 @@ pub enum PATTERN {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
+#[allow(dead_code)]
 pub enum ChangeType {
     // add -> saturating_add
     ToSaturating,
@@ -33,6 +37,8 @@ pub enum ChangeType {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
+#[allow(dead_code)]
 pub enum AddType {
     // add as_bytes
     AddAsBytes,
@@ -41,6 +47,8 @@ pub enum AddType {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
+#[allow(dead_code)]
 pub enum CheckType {
     // Wrap with a if check
     Wrap,
@@ -49,6 +57,8 @@ pub enum CheckType {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
+#[allow(dead_code)]
 pub enum MatchType {
     // return None
     ReturnNone,

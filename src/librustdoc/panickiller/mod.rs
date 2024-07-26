@@ -14,14 +14,14 @@ use rustc_middle::ty::TyCtxt;
 use crate::panickiller::fault_localization::graph::{DependencyGraph, GraphVisitor};
 use crate::panickiller::patch_generation::patch::Transform;
 // use crate::panickiller::fault_localization::extract::extract_backtrace;
-use crate::panickiller::patch_generation::rank::PatchRanker;
-use crate::panickiller::patch_validation::validation::Validator;
+// use crate::panickiller::patch_generation::rank::PatchRanker;
+// use crate::panickiller::patch_validation::validation::Validator;
 
 // location-baseline3(backtrace random)
 // use crate::tooling::utils::get_random_location_from_fault_locs;
 
 // location-baseline4(nlp)
-// use crate::tooling::utils::get_fault_loc_from_simi;
+use crate::panickiller::utils::get_fault_loc_from_simi;
 
 pub fn analyze_dependencies(tcx: TyCtxt<'_>) {
     let start_time = Instant::now();
@@ -78,8 +78,11 @@ pub fn analyze_dependencies(tcx: TyCtxt<'_>) {
     // Extract backtrace
     writeln!(log_file, "Fault localization begins.").expect("Failed to write to log file");
     // let fault_locs = extract_backtrace(PathBuf::from("../src/backtrace"));
-    let fault_locs = utils::get_perfect_location();
+    // let fault_locs = utils::get_perfect_location();
+    println!("Get locations!");
+    let fault_locs = get_fault_loc_from_simi(panic_info.clone()).unwrap();
     for fault_loc in fault_locs.clone() {
+        println!("{:?}", fault_loc);
         writeln!(log_file, "{:?}", fault_loc).expect("Failed to write to log file");
     }
     println!("Fault localization ends.");
@@ -93,18 +96,18 @@ pub fn analyze_dependencies(tcx: TyCtxt<'_>) {
     // let mut transform = Transform::new(output_path, get_random_location_from_fault_locs(fault_locs.clone()), panic_info);
 
     // location-baseline4(nlp)
-    // let mut transform = Transform::new(output_path, get_fault_loc_from_simi(panic_info.clone()).unwrap(), panic_info.clone());
+    let mut _transform = Transform::new(output_path, get_fault_loc_from_simi(panic_info.clone()).unwrap(), panic_info.clone());
 
-    let mut transform = Transform::new(output_path, fault_locs.clone(), panic_info);
-    transform.transform();
-    println!("Patch Generation ends: {:#?}", transform.file_mapping);
-    writeln!(log_file, "Patch Generation ends: {:#?}.", transform.file_mapping).expect("Failed to write to log file");
+    // let mut transform: Transform = Transform::new(output_path, fault_locs.clone(), panic_info);
+    // transform.transform();
+    // println!("Patch Generation ends: {:#?}", transform.file_mapping);
+    // writeln!(log_file, "Patch Generation ends: {:#?}.", transform.file_mapping).expect("Failed to write to log file");
 
     // Patch validation
     println!("Patch Validation begins.");
     writeln!(log_file, "Patch Validation begins.").expect("Failed to write to log file");
-    let mut validator = Validator::new(transform.patches.iter_mut().collect());
-    validator.validate();
+    // let mut _validator = Validator::new(transform.patches.iter_mut().collect());
+    // validator.validate();
     println!("Patch Validation ends.");
     writeln!(log_file, "Patch Validation ends.").expect("Failed to write to log file");
 
@@ -113,8 +116,8 @@ pub fn analyze_dependencies(tcx: TyCtxt<'_>) {
     writeln!(log_file, "Analysis ends.").expect("Failed to write to log file");
 
     // Rank patches
-    let mut patch_ranker = PatchRanker::new(transform.patches);
-    patch_ranker.rank_patches().expect("Failed to rank patches");
+    // let mut patch_ranker = PatchRanker::new(transform.patches);
+    // patch_ranker.rank_patches().expect("Failed to rank patches");
 
     // Print some console output as well
     println!("Analysis completed. Check log.txt for details. Results are also logged in result.txt.");
@@ -142,12 +145,12 @@ pub fn analyze_dependencies(tcx: TyCtxt<'_>) {
     }
 
     // Print ranked patches and log ranked patches
-    println!("Ranked patches:");
-    writeln!(result_file, "Ranked patches:").expect("Failed to write to log file");
-    for (rank, patch) in patch_ranker.patches.iter().enumerate() {
-        println!("Rank {}: {}", rank + 1, patch);
-        writeln!(result_file, "Rank {}: {}", rank + 1, patch).expect("Failed to write to log file");
-    }
+    // println!("Ranked patches:");
+    // writeln!(result_file, "Ranked patches:").expect("Failed to write to log file");
+    // for (rank, patch) in patch_ranker.patches.iter().enumerate() {
+    //     println!("Rank {}: {}", rank + 1, patch);
+    //     writeln!(result_file, "Rank {}: {}", rank + 1, patch).expect("Failed to write to log file");
+    // }
 
     let end_time = Instant::now();
     let elapsed_time = end_time.duration_since(start_time);

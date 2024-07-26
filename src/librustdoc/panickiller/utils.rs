@@ -153,6 +153,8 @@ pub fn extract_index_from_panic(panic_info: String) -> Option<i32> {
 
 use super::fault_localization::extract::FaultLoc;
 
+#[allow(unused)]
+#[allow(dead_code)]
 pub fn get_perfect_location() -> Vec<FaultLoc> {
     let pl_path = std::env::current_dir()
         .expect("Failed to get current directory")
@@ -230,61 +232,80 @@ pub fn get_perfect_location() -> Vec<FaultLoc> {
 // }
 
 // location-baseline3(nlp)
+use std::fs::File;
+use std::io::{self, Read};
+use pyo3::prelude::*;
+use pyo3::types::PyModule;
 
-// use pyo3::prelude::*;
-// use super::fault_localization::extract::FaultLoc;
+pub fn get_fault_loc_from_simi(panic_info: String) -> PyResult<Vec<FaultLoc>> {
+    Python::with_gil(|py| {
+        let sys = PyModule::import(py, "sys")?;
+        let path = "/home/yunboni/PanicKiller/src/librustdoc/panickiller/patch_generation";
+        sys.getattr("path")?.call_method1("append", (path,))?;
 
-// pub fn get_fault_loc_from_simi(panic_info: String) -> PyResult<Vec<FaultLoc>> {
-//     Python::with_gil(|py| {
-//         let sys = PyModule::import(py, "sys")?;
-//         let path = "/home/cardigan/rustc-graph/src/librustdoc/tooling/patch_generation";
-//         sys.getattr("path")?.call_method1("append", (path,))?;
+        let mut all_scores: Vec<FaultLoc> = Vec::new();
 
-//         let mut all_scores: Vec<FaultLoc> = Vec::new();
+        let files = get_all_files_in_directory(&std::env::current_dir()?)?;
+        let text_similarity: &PyModule = PyModule::import(py, "text_similarity")?;
+        
+        for file in files {
+            let file_content = read_file_as_bytes(&file)?;
+            let file_string = String::from_utf8_lossy(&file_content);
+            for (line_number, line) in file_string.lines().enumerate() {
+                println!("line_number: {:?}", line_number);
+                let panic_info_clean = sanitize_utf8(&panic_info);
+                let line_clean = sanitize_utf8(&line.to_string());
 
-//         let files = get_all_files_in_directory(&std::env::current_dir()?)?;
-//         let text_similarity: &PyModule = PyModule::import(py, "text_similarity")?;
-//         for file in files {
-//             let file_content = std::fs::read_to_string(&file)?;
-//             for (line_number, line) in file_content.lines().enumerate() {
-//                 let score: f64 = text_similarity.call_method1(
-//                     "calculate_similarity_for_single_pair",
-//                     (panic_info.clone(), line.to_string())
-//                 )?.extract()?;
-                
-//                 all_scores.push(FaultLoc {
-//                     ident: "".to_string(),
-//                     line_num: line_number + 1,
-//                     col_num: 0,
-//                     file_path: file.clone(),
-//                     is_dep: false,
-//                     depth: 1,
-//                     score: score,
-//                 });
-//             }
-//         }
+                let score: f64 = text_similarity.call_method1(
+                    "calculate_similarity_for_single_pair",
+                    (panic_info_clean, line_clean)
+                )?.extract()?;
+                println!("score: {:?}", score);
 
-//         all_scores.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-//         let top_scores = all_scores.into_iter().take(5).collect::<Vec<FaultLoc>>();
+                all_scores.push(FaultLoc {
+                    ident: "".to_string(),
+                    line_num: line_number + 1,
+                    col_num: 0,
+                    file_path: file.clone(),
+                    is_dep: false,
+                    depth: 1,
+                    score: score,
+                });
+            }
+        }
 
-//         Ok(top_scores)
-//     })
-// }
+        all_scores.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        let top_scores = all_scores.into_iter().take(5).collect::<Vec<FaultLoc>>();
 
-// fn get_all_files_in_directory(dir: &PathBuf) -> Result<Vec<PathBuf>, std::io::Error> {
-//     let mut files = Vec::new();
+        Ok(top_scores)
+    })
+}
 
-//     for entry in std::fs::read_dir(dir)? {
-//         let entry = entry?;
-//         let path = entry.path();
+fn get_all_files_in_directory(dir: &PathBuf) -> Result<Vec<PathBuf>, std::io::Error> {
+    let mut files = Vec::new();
 
-//         if path.is_dir() {
-//             let sub_files = get_all_files_in_directory(&path)?;
-//             files.extend(sub_files);
-//         } else {
-//             files.push(path);
-//         }
-//     }
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
 
-//     Ok(files)
-// }
+        if path.is_dir() {
+            let sub_files = get_all_files_in_directory(&path)?;
+            files.extend(sub_files);
+        } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+            files.push(path);
+        }
+    }
+
+    Ok(files)
+}
+
+fn read_file_as_bytes(path: &PathBuf) -> Result<Vec<u8>, io::Error> {
+    let mut file = File::open(path)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    Ok(buffer)
+}
+
+fn sanitize_utf8<T: AsRef<str>>(input: T) -> String {
+    input.as_ref().chars().filter(|c| c.is_ascii() || c.is_alphabetic()).collect()
+}

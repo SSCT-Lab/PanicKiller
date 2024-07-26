@@ -1,15 +1,21 @@
 use pyo3::prelude::*;
 use super::patch::Patch;
 
+#[allow(unused)]
+#[allow(dead_code)]
 pub(crate) struct PatchRanker {
     pub patches: Vec<Patch>,
 }
 
 impl PatchRanker {
+    #[allow(unused)]
+    #[allow(dead_code)]
     pub fn new(patches: Vec<Patch>) -> Self {
         PatchRanker { patches }
     }
 
+    #[allow(unused)]
+    #[allow(dead_code)]
     pub fn rank_patches(&mut self) -> PyResult<()> {
         Python::with_gil(|py| {
             let sys = PyModule::import(py, "sys")?;

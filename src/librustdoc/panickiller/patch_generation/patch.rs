@@ -5,11 +5,13 @@ use rustc_data_structures::fx::FxHashMap;
 use syn::token::Paren;
 use syn::{punctuated::Punctuated, spanned::Spanned, ExprMethodCall};
 
-use crate::panickiller::{fault_localization::extract::FaultLoc, utils::extract_index_from_panic};
+use crate::panickiller::fault_localization::extract::FaultLoc;
 use crate::panickiller::patch_generation::patterns::PATTERN;
 
 use super::patterns::{AddType, ChangeType, CheckType, MatchType};
 
+#[allow(unused)]
+#[allow(dead_code)]
 pub(crate) struct Transform {
     pub output_path: Option<PathBuf>,
     pub fault_locs: Vec<FaultLoc>,
@@ -53,6 +55,8 @@ impl Transform {
         }
     }
 
+    #[allow(unused)]
+    #[allow(dead_code)] 
     pub fn transform(&mut self) {  
         // Open log file
         let log_file_path = std::env::current_dir()
@@ -145,7 +149,8 @@ impl Transform {
         }
     }
 }
-
+#[allow(unused)]
+#[allow(dead_code)]
 pub struct AstVisitor<'ast> {
     fault_loc: &'ast FaultLoc,
     fix_pattern: PATTERN,
@@ -2893,7 +2898,7 @@ impl<'ast> syn::visit_mut::VisitMut for AstVisitor<'ast> {
                 PATTERN::IndexMutate => {
                     let span = i.index.span();
 
-                    let index_mutate = extract_index_from_panic(self.panic_info.clone()).unwrap_or(1);
+                    let index_mutate = crate::panickiller::utils::extract_index_from_panic(self.panic_info.clone()).unwrap_or(1);
 
                     if let syn::Expr::Binary(expr_binary) = i.index.as_mut() {
                         let new_expr = syn::Expr::Binary(syn::ExprBinary {
