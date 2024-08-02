@@ -1,77 +1,62 @@
-<div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rust-lang/www.rust-lang.org/master/static/images/rust-social-wide-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rust-lang/www.rust-lang.org/master/static/images/rust-social-wide-light.svg">
-    <img alt="The Rust Programming Language: A language empowering everyone to build reliable and efficient software"
-         src="https://raw.githubusercontent.com/rust-lang/www.rust-lang.org/master/static/images/rust-social-wide-light.svg"
-         width="50%">
-  </picture>
+# PanicKiller
 
-[Website][Rust] | [Getting started] | [Learn] | [Documentation] | [Contributing]
-</div>
+## Overview
 
-This is the main source code repository for [Rust]. It contains the compiler,
-standard library, and documentation.
+PanicKiller is a pattern-based automated panic bugs fixing tool. It first locates suspicious expressions based on the backtrace information output by the compiler and the dependency flow analysis of the original program. Then, combining with the semantic information of the errors, it generates a series of patch for each fault location. Finally, it sorts all the patches with verification and matching scores calculation, and outputs the top-5 ranked patches along with the corresponding natural language interpretation.
 
-[Rust]: https://www.rust-lang.org/
-[Getting Started]: https://www.rust-lang.org/learn/get-started
-[Learn]: https://www.rust-lang.org/learn
-[Documentation]: https://www.rust-lang.org/learn#learn-use
-[Contributing]: CONTRIBUTING.md
+## Usage
 
-## Why Rust?
+### Build
 
-- **Performance:** Fast and memory-efficient, suitable for critical services, embedded devices, and easily integrate with other languages.
+PanicKiller is built on top of the [Rust project]{https://github.com/rust-lang/rust}. To compile it, follow the instructions provided in the _How  to build and run the compiler Chapter_ of the [Rust Compiler Development Guide](https://rustc-dev-guide.rust-lang.org/building/how-to-build-and-run.html). Building the stage 2 compiler is necessary for compiling PanicKiller. Here are the simplified build instructions:
 
-- **Reliability:** Our rich type system and ownership model ensure memory and thread safety, reducing bugs at compile-time.
+```shell
+python ./x.py build --stage 2
+```
 
-- **Productivity:** Comprehensive documentation, a compiler committed to providing great diagnostics, and advanced tooling including package manager and build tool ([Cargo]), auto-formatter ([rustfmt]), linter ([Clippy]) and editor support ([rust-analyzer]).
+### Run
 
-[Cargo]: https://github.com/rust-lang/cargo
-[rustfmt]: https://github.com/rust-lang/rustfmt
-[Clippy]: https://github.com/rust-lang/rust-clippy
-[rust-analyzer]: https://github.com/rust-lang/rust-analyzer
+To run PanicKiller, structure your project as follows:
 
-## Quick Start
+```css
+── crate
+── src
+   ├── backtrace
+   └── panic_info.txt
+```
 
-Read ["Installation"] from [The Book].
+Here, backtrace contains the trace output when running the panic case with RUST_BACKTRACE=full, and panic_info.txt holds the error message.
 
-["Installation"]: https://doc.rust-lang.org/book/ch01-01-installation.html
-[The Book]: https://doc.rust-lang.org/book/index.html
+Navigate to the crate directory and set the environment variables:
 
-## Installing from Source
+```shell
+export RUSTC=/pathToPanicKiller/build/x86_64-unknown-linux-gnu/stage2/bin/rustc
+export RUSTDOC=/pathToPanicKiller/build/x86_64-unknown-linux-gnu/stage2/bin/rustdoc
+```
 
-If you really want to install from source (though this is not recommended), see
-[INSTALL.md](INSTALL.md).
+Then, clean the project and generate documentation:
 
-## Getting Help
+```shell
+cargo clean
+cargo doc -v
+```
 
-See https://www.rust-lang.org/community for a list of chat platforms and forums.
+This command will typically execute a process with the last command similar to:
 
-## Contributing
+```
+/pathToRustDoc/rustdoc --edition=2021 --crate-type lib --crate-name crate src/lib.rs -o /pathToCrate/target/doc --cfg 'feature="android-tzdata"' --cfg 'feature="clock"' --cfg 'feature="default"' --cfg 'feature="iana-time-zone"' --cfg 'feature="js-sys"' --cfg 'feature="oldtime"' --cfg 'feature="std"' --cfg 'feature="wasm-bindgen"' --cfg 'feature="wasmbind"' --cfg 'feature="winapi"' --cfg 'feature="windows-targets"' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --diagnostic-width=130 -C metadata=d99978fb566a8d1a -L dependency=/pathToCrate/target/debug/deps --extern iana_time_zone=/pathToCrate/target/debug/deps/libiana_time_zone-09090f81caa6c751.rmeta --extern num_traits=/pathToCrate/target/debug/deps/libnum_traits-e8610d3cd080ac83.rmeta --crate-version 0.4.30
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+You should replace rustdoc with tooling in the actual command, like so:
 
-## License
+```
+/pathToRustDoc/tooling --edition=2021 --crate-type lib --crate-name crate src/lib.rs -o /pathToCrate/target/doc --cfg 'feature="android-tzdata"' --cfg 'feature="clock"' --cfg 'feature="default"' --cfg 'feature="iana-time-zone"' --cfg 'feature="js-sys"' --cfg 'feature="oldtime"' --cfg 'feature="std"' --cfg 'feature="wasm-bindgen"' --cfg 'feature="wasmbind"' --cfg 'feature="winapi"' --cfg 'feature="windows-targets"' --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --diagnostic-width=130 -C metadata=d99978fb566a8d1a -L dependency=/pathToCrate/target/debug/deps --extern iana_time_zone=/pathToCrate/target/debug/deps/libiana_time_zone-09090f81caa6c751.rmeta --extern num_traits=/pathToCrate/target/debug/deps/libnum_traits-e8610d3cd080ac83.rmeta --crate-version 0.4.30
+```
 
-Rust is primarily distributed under the terms of both the MIT license and the
-Apache License (Version 2.0), with portions covered by various BSD-like
-licenses.
+### Output
 
-See [LICENSE-APACHE](LICENSE-APACHE), [LICENSE-MIT](LICENSE-MIT), and
-[COPYRIGHT](COPYRIGHT) for details.
+PanicKiller outputs its results in various files:
 
-## Trademark
-
-[The Rust Foundation][rust-foundation] owns and protects the Rust and Cargo
-trademarks and logos (the "Rust Trademarks").
-
-If you want to use these names or brands, please read the
-[media guide][media-guide].
-
-Third-party logos may be subject to third-party copyrights and trademarks. See
-[Licenses][policies-licenses] for details.
-
-[rust-foundation]: https://foundation.rust-lang.org/
-[media-guide]: https://foundation.rust-lang.org/policies/logo-policy-and-media-guide/
-[policies-licenses]: https://www.rust-lang.org/policies/licenses
+- A patches directory: Includes all generated patches.
+- log.txt: Contains detailed logs of the operation.
+- result.txt: Stores the results of the patches applied.
