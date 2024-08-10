@@ -8,7 +8,7 @@ PanicKiller is a pattern-based automated panic bugs fixing tool. It first locate
 
 ### Build
 
-PanicKiller is built on top of the [Rust project]{https://github.com/rust-lang/rust}. To compile it, follow the instructions provided in the _How  to build and run the compiler Chapter_ of the [Rust Compiler Development Guide](https://rustc-dev-guide.rust-lang.org/building/how-to-build-and-run.html). Building the stage 2 compiler is necessary for compiling PanicKiller. Here are the simplified build instructions:
+PanicKiller is built on top of the [Rust project](https://github.com/rust-lang/rust). To compile it, follow the instructions provided in the _How  to build and run the compiler Chapter_ of the [Rust Compiler Development Guide](https://rustc-dev-guide.rust-lang.org/building/how-to-build-and-run.html). Building the stage 2 compiler is necessary for compiling PanicKiller. Here are the simplified build instructions:
 
 ```shell
 python ./x.py build --stage 2
