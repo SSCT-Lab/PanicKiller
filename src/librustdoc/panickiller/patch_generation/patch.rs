@@ -98,6 +98,9 @@ impl Transform {
                 PATTERN::MatchAdd(MatchType::ReturnOk),
                 PATTERN::MatchAdd(MatchType::ReturnErr),
                 PATTERN::MatchAdd(MatchType::ReturnNone),
+                PATTERN::DeleteSecondBorrow,
+                PATTERN::LiteralChange,
+                PATTERN::ReorderState,
             ];
 
             for pattern in patterns {
@@ -342,6 +345,47 @@ impl<'ast> syn::visit_mut::VisitMut for AstVisitor<'ast> {
         for (mut index, stmt) in stmts.iter().enumerate() {
             if let syn::Stmt::Expr(expr, _) = stmt {
                 match self.fix_pattern.clone() {
+                    PATTERN::ReorderState => {
+                        match expr {
+                            syn::Expr::Macro(expr_macro) => {
+                                let span = &expr_macro.span();
+                                let start = span.start().line;
+                                let end = span.end().line;
+
+                                if self.get_loc_num().0 <= end as i32 && self.get_loc_num().0 >= start as i32 {
+                                    if expr_macro.mac.path.segments[0].ident.to_string() == "ready" {
+                                        if index + 1 < i.stmts.len() {
+                                            if index + 2 < i.stmts.len() {
+                                                let tmp = i.stmts[index + 1].clone();
+                                                i.stmts[index + 1] = i.stmts[index + 2].clone();
+                                                i.stmts[index + 2] = tmp;
+                                                self.transformed();
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                    },
+                    PATTERN::DeleteSecondBorrow => {
+                        match expr {
+                            syn::Expr::MethodCall(expr_call) => {
+                                let span = &expr_call.span();
+                                let start = span.start().line;
+                                let end = span.end().line;
+
+                                if self.get_loc_num().0 <= end as i32 && self.get_loc_num().0 >= start as i32 {
+                                    if expr_call.method.to_string() == "borrow_mut" {
+                                        // remove this stmt
+                                        i.stmts.remove(index);
+                                        self.transformed();
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                    },
                     PATTERN::IfPreAdd | PATTERN::IfPostAdd => {
                         match expr {
                             syn::Expr::Binary(expr_binary) => {
@@ -1328,6 +1372,130 @@ impl<'ast> syn::visit_mut::VisitMut for AstVisitor<'ast> {
                 };
                 
                 match self.fix_pattern.clone() {
+                    PATTERN::ReorderState => {
+                        match expr {
+                            syn::Expr::Macro(expr_macro) => {
+                                let span = &expr_macro.span();
+                                let start = span.start().line;
+                                let end = span.end().line;
+
+                                if self.get_loc_num().0 <= end as i32 && self.get_loc_num().0 >= start as i32 {
+                                    if expr_macro.mac.path.segments[0].ident.to_string() == "ready" {
+                                        let mut new_tokens = proc_macro2::TokenStream::new();
+                                        let mut is_question = false;
+
+                                        for token in expr_macro.mac.tokens.clone() {
+                                            if let proc_macro2::TokenTree::Punct(punct) = token {
+                                                if punct.as_char() == '?' {
+                                                    is_question = true;
+                                                } else {
+                                                    new_tokens.extend(Some(proc_macro2::TokenTree::Punct(punct)));
+                                                }
+                                            } else {
+                                                new_tokens.extend(Some(token));
+                                            }
+                                        }
+
+                                        println!("is_question: {:?}", is_question);
+                                        println!("expr_macro: {:#?}", expr_macro);
+
+                                        if is_question {
+                                            let new_expr_macro = syn::ExprMacro {
+                                                attrs: expr_macro.attrs.clone(),
+                                                mac: syn::Macro {
+                                                    path: expr_macro.mac.path.clone(),
+                                                    bang_token: expr_macro.mac.bang_token.clone(),
+                                                    delimiter: expr_macro.mac.delimiter.clone(),
+                                                    tokens: new_tokens,
+                                                },
+                                            };
+
+                                            // construct let tmp = new_expr_macro;
+                                            let ident_tmp = syn::Ident::new("tmp", i.span());
+                                            let new_let = syn::Stmt::Local(syn::Local {
+                                                attrs: Vec::new(),
+                                                let_token: Default::default(),
+                                                pat: syn::Pat::Ident(syn::PatIdent {
+                                                    attrs: Vec::new(),
+                                                    by_ref: None,
+                                                    mutability: Some(Default::default()),
+                                                    ident: ident_tmp.clone(),
+                                                    subpat: None,
+                                                }),
+                                                init: Some(syn::LocalInit {
+                                                    eq_token: Default::default(),
+                                                    expr: Box::new(syn::Expr::Macro(new_expr_macro)),
+                                                    diverge: None,
+                                                }),
+                                                semi_token: Default::default(),
+                                            });
+
+                                            let new_local = syn::Stmt::Local(syn::Local {
+                                                attrs: Vec::new(),
+                                                let_token: Default::default(),
+                                                pat: local.pat.clone(),
+                                                // init: tmp?
+                                                init: Some(syn::LocalInit {
+                                                    eq_token: Default::default(),
+                                                    expr: Box::new(syn::Expr::Try(syn::ExprTry {
+                                                        attrs: Vec::new(),
+                                                        expr: Box::new(syn::Expr::Path(syn::ExprPath {
+                                                            attrs: Vec::new(),
+                                                            qself: None,
+                                                            path: syn::Path {
+                                                                leading_colon: None,
+                                                                segments: Punctuated::from_iter(vec![
+                                                                    syn::PathSegment {
+                                                                        ident: ident_tmp.clone(),
+                                                                        arguments: Default::default(),
+                                                                    }
+                                                                ]),
+                                                            },
+                                                        })),
+                                                        question_token: Default::default(),
+                                                    })),
+                                                    diverge: None,
+                                                }),
+                                                semi_token: Default::default()
+                                            });
+                                            i.stmts[index] = new_let;
+                                            i.stmts.insert(index + 2, new_local);
+
+                                            self.transformed();
+                                        } else {
+                                            if index + 1 < i.stmts.len() {
+                                                if index + 2 < i.stmts.len() {
+                                                    let tmp = i.stmts[index + 1].clone();
+                                                    i.stmts[index + 1] = i.stmts[index + 2].clone();
+                                                    i.stmts[index + 2] = tmp;
+                                                    self.transformed();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                    },
+                    PATTERN::DeleteSecondBorrow => {
+                        match expr {
+                            syn::Expr::MethodCall(expr_call) => {
+                                let span = &expr_call.span();
+                                let start = span.start().line;
+                                let end = span.end().line;
+
+                                if self.get_loc_num().0 <= end as i32 && self.get_loc_num().0 >= start as i32 {
+                                    if expr_call.method.to_string() == "borrow_mut" {
+                                        // remove this stmt
+                                        i.stmts.remove(index);
+                                        self.transformed();
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                    },
                     PATTERN::IfPreAdd | PATTERN::IfPostAdd => {
                         match expr {
                             syn::Expr::Binary(expr_binary) => {
@@ -3205,5 +3373,27 @@ impl<'ast> syn::visit_mut::VisitMut for AstVisitor<'ast> {
         }
 
         syn::visit_mut::visit_expr_method_call_mut(self, i);
+    }
+
+    fn visit_lit_int_mut(&mut self, i: &mut syn::LitInt) {
+        let span = &i.span();
+        let start = span.start().line;
+        let end = span.end().line;
+
+        if self.get_loc_num().0 <= end as i32 && self.get_loc_num().0 >= start as i32 {
+            match &self.fix_pattern {
+                PATTERN::LiteralChange => {
+                    // change 0 to 1
+                    if i.base10_digits() == "0" {
+                        let lit_1 = syn::LitInt::new("1", i.span());
+                        *i = lit_1;
+                        self.transformed();
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        syn::visit_mut::visit_lit_int_mut(self, i);
     }
 }

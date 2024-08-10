@@ -1,3 +1,5 @@
+use std::{env, path::PathBuf};
+
 use pyo3::prelude::*;
 use super::patch::Patch;
 
@@ -13,7 +15,10 @@ impl PatchRanker {
     pub fn rank_patches(&mut self) -> PyResult<()> {
         Python::with_gil(|py| {
             let sys = PyModule::import(py, "sys")?;
-            let path = "/home/yunboni/PanicKiller/src/librustdoc/panickiller/patch_generation";
+            let base_path = env::var("PROJECT_BASE_PATH").expect("PROJECT_BASE_PATH is not set!");
+            let mut path_buf = PathBuf::from(base_path);
+            path_buf.push("src/librustdoc/panickiller/patch_generation");
+            let path = path_buf.to_str().unwrap();
             sys.getattr("path")?.call_method1("append", (path,))?;
 
             let text_similarity = PyModule::import(py, "text_similarity")?;

@@ -10,6 +10,9 @@ pub enum PATTERN {
     IndexMutate,
     UnsafeAdd,
     MatchAdd(MatchType),
+    DeleteSecondBorrow,
+    LiteralChange,
+    ReorderState,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +76,9 @@ impl std::fmt::Display for PATTERN {
             PATTERN::IndexMutate => write!(f, "IndexMutate"),
             PATTERN::UnsafeAdd => write!(f, "UnsafeAdd"),
             PATTERN::MatchAdd(match_type) => write!(f, "MatchAdd({})", match_type),
+            PATTERN::DeleteSecondBorrow => write!(f, "DeleteSecondBorrow"),
+            PATTERN::LiteralChange => write!(f, "LiteralChange"),
+            PATTERN::ReorderState => write!(f, "ReorderState"),
         }
     }
 }
@@ -146,6 +152,9 @@ impl PATTERN {
                 "Adds or revises match arms to handle all possible return types, including None, Ok, Err, or default values, to prevent panics due to unmatched patterns or unexpected return values, such as {}",
                 match_type.description()
             ),
+            PATTERN::DeleteSecondBorrow => "Removes redundant or unnecessary borrow operations, especially when dealing with mutable references, to prevent panics due to multiple mutable borrows or ownership conflicts.".to_string(),
+            PATTERN::LiteralChange => "Modifies literals or constants to ensure that they are within valid ranges or bounds, preventing panics due to overflow, underflow, or other arithmetic errors.".to_string(),
+            PATTERN::ReorderState => "Advance the state changer statement to avoid incorrect state resumption after asynchronous functions have completed.".to_string(),
         }
     }
 }

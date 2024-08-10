@@ -30,6 +30,7 @@ Here, backtrace contains the trace output when running the panic case with RUST_
 Navigate to the crate directory and set the environment variables:
 
 ```shell
+export PROJECT_BASE_PATH=/pathtoPanicKiller
 export RUSTC=/pathToPanicKiller/build/x86_64-unknown-linux-gnu/stage2/bin/rustc
 export RUSTDOC=/pathToPanicKiller/build/x86_64-unknown-linux-gnu/stage2/bin/rustdoc
 ```
